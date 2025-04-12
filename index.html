@@ -1,0 +1,963 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>知识卡片生成器</title>
+        <link
+            href="https://lf3-cdn-tos.bytecdntp.com/cdn/expire-1-M/tailwindcss/2.2.19/tailwind.min.css"
+            rel="stylesheet"
+        />
+        <link
+            href="https://lf6-cdn-tos.bytecdntp.com/cdn/expire-100-M/font-awesome/6.0.0/css/all.min.css"
+            rel="stylesheet"
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap"
+            rel="stylesheet"
+        />
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+            integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA=="
+            crossorigin="anonymous"
+            referrerpolicy="no-referrer"
+        ></script>
+
+        <style>
+            /* Base Font Families */
+            body {
+                font-family: "Noto Sans SC", sans-serif;
+                background-color: #f8f8f8; /* Light background for the page */
+            }
+            
+            /* Card content styling */
+            .card-content {
+                word-break: break-all;
+            }
+            .font-serif-sc {
+                font-family: "Noto Serif SC", serif;
+            }
+            .font-sans-sc {
+                font-family: "Noto Sans SC", sans-serif;
+            }
+
+            /* Style specific overrides and complex styles */
+            .style-art-deco {
+                background-color: #1a1a1a;
+                color: #e0e0e0;
+                border: 5px solid #d4af37; /* Gold border */
+                position: relative; /* Needed for pseudo-elements */
+                font-family:
+                    "Times New Roman", "Noto Serif SC", serif; /* Geometric-like Serif */
+            }
+            .style-art-deco::before,
+            .style-art-deco::after {
+                content: "";
+                position: absolute;
+                width: 20px;
+                height: 20px;
+                border-color: #d4af37;
+                border-style: solid;
+            }
+            .style-art-deco::before {
+                top: 10px;
+                left: 10px;
+                border-width: 2px 0 0 2px;
+            }
+            .style-art-deco::after {
+                bottom: 10px;
+                right: 10px;
+                border-width: 0 2px 2px 0;
+            }
+            /* Add more intricate Art Deco patterns if needed via SVG or more pseudo-elements */
+
+            .style-postmodern {
+                overflow: hidden; /* Hide overflowing elements if needed */
+                position: relative;
+            }
+            .style-postmodern .text-overlap {
+                position: absolute;
+                opacity: 0.7;
+                transform: rotate(-15deg);
+                font-size: 1.5em; /* Example */
+                color: #ff00ff; /* Example clash */
+            }
+            .style-postmodern .cut-text {
+                -webkit-clip-path: polygon(0 0, 100% 20%, 100% 100%, 0 80%);
+                clip-path: polygon(0 0, 100% 20%, 100% 100%, 0 80%);
+            }
+
+            .style-neo-expressionism {
+                background-color: #ffff00; /* Bold base */
+                border: 5px solid #000000;
+                position: relative;
+            }
+            .style-neo-expressionism .scribble {
+                position: absolute;
+                top: 50px;
+                left: 10%;
+                width: 80%;
+                height: 2px;
+                background-color: #ff0000;
+                transform: rotate(3deg);
+                box-shadow: 0 5px 0 #0000ff;
+            }
+            .style-neo-expressionism .splatter {
+                position: absolute;
+                width: 50px;
+                height: 50px;
+                background-color: #ff00ff;
+                border-radius: 50%;
+                opacity: 0.6;
+                filter: blur(5px);
+            }
+
+            .style-hypersensory-minimalism {
+                background: linear-gradient(
+                    135deg,
+                    #fdfdfd 0%,
+                    #f9f9f9 100%
+                ); /* Subtle gradient */
+                border: 1px solid #f0f0f0;
+                transition: background 0.8s ease-in-out; /* Slow transition */
+            }
+            .style-hypersensory-minimalism:hover {
+                background: linear-gradient(135deg, #fcfcfc 0%, #f7f7f7 100%);
+            }
+            .style-hypersensory-minimalism .subtle-element {
+                opacity: 0.8;
+                transition: opacity 0.5s ease;
+            }
+            .style-hypersensory-minimalism:hover .subtle-element {
+                opacity: 1;
+            }
+
+            /* Active style button */
+            .style-button.active {
+                background-color: #3b82f6; /* Blue-500 */
+                color: white;
+                font-weight: 600;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+
+            /* Preview Area Fixed Size */
+            #preview-card-container {
+                width: 440px;
+                /* max-height: 1280px; */ /* Max height can be controlled by content or explicit height on generated card */
+                margin: 0 auto; /* Center the preview container */
+                overflow: hidden; /* Ensure content fits */
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* Add shadow for depth */
+                background-color: #e0e0e0; /* Placeholder background */
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 600px; /* Ensure container has size initially */
+                border: 1px dashed #ccc;
+            }
+            /* Ensure generated card respects container boundaries */
+            #preview-card {
+                width: 100%;
+                max-width: 440px;
+                /* Height will be determined by content and style, up to 1280px */
+                /* max-height: 1280px; */ /* Apply this if strict max height is needed */
+                overflow: hidden; /* Prevent content spillover */
+                transition: all 0.3s ease-in-out; /* Smooth style transitions */
+            }
+            /* Ensure images within card scale correctly */
+            #preview-card img {
+                max-width: 100%;
+                height: auto;
+                display: block;
+            }
+
+            /* Centered QR code styling */
+            .qr-code-container {
+                display: flex;
+                justify-content: center;
+                width: 100%;
+                margin-top: 1.5rem;
+            }
+            .qr-code {
+                width: 100px;
+                height: 100px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                background: white;
+                padding: 0.5rem;
+            }
+            .qr-code:empty {
+                display: none;
+            }
+
+            /* QR code upload container */
+            .qr-upload-container {
+                display: flex;
+                align-items: center;
+            }
+            .qr-upload-container .delete-btn {
+                margin-left: 8px;
+                color: #ef4444;
+                cursor: pointer;
+                display: none;
+            }
+
+            /* Loader Styles */
+            .loader {
+                border: 4px solid #f3f3f3; /* Light grey */
+                border-top: 4px solid #3498db; /* Blue */
+                border-radius: 50%;
+                width: 30px;
+                height: 30px;
+                animation: spin 1s linear infinite;
+                margin-left: 10px; /* Space from button text */
+                display: none; /* Hidden by default */
+            }
+
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+
+            /* Button container adjustments */
+            .button-container {
+                margin-top: 20px;
+            }
+
+            /* Notes styles that will render consistently in html2canvas */
+            .notes-minimalist {
+                margin-top: 0;
+                margin-bottom: 0;
+                padding-top: 0;
+                background-color: #f9f9f9;
+                padding: 1rem;
+                border-left: 2px solid #ddd;
+            }
+            .notes-bold-modern {
+                margin-top: 0;
+                padding-top: 0;
+                background-color: #2d3748;
+                padding: 1.25rem;
+                border-left: 4px solid #f56565;
+                color: #e2e8f0;
+            }
+            .notes-art-deco {
+                margin: 0 auto;
+                padding-top: 0;
+                max-width: 80%;
+                background-color: rgba(0, 0, 0, 0.5);
+                padding: 1rem;
+                border: 1px solid #d4af37;
+                color: #e0e0e0;
+                text-align: left;
+            }
+            .notes-neo-expressionism {
+                margin-top: 0;
+                padding-top: 0;
+                background-color: #fefcbf;
+                padding: 0.75rem;
+                border: 2px solid #4c51bf;
+                transform: rotate(1deg);
+                box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            .notes-extreme-minimalism {
+                margin-top: 0;
+                padding-top: 0;
+                font-size: 0.625rem;
+                color: #718096;
+                font-weight: 200;
+                font-style: italic;
+            }
+            .notes-hypersensory-minimalism {
+                margin-top: 0;
+                padding-top: 0;
+                background-color: rgba(249, 250, 251, 0.5);
+                padding: 1rem;
+                color: #6b7280;
+            }
+            .notes-default {
+                margin-top: 0;
+                margin-bottom: 0;
+                padding-top: 0;
+                background-color: #f9f9f9;
+                padding: 1rem;
+                color: #666;
+            }
+        </style>
+    </head>
+    <body class="bg-gray-100 p-8">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-serif-sc font-bold text-gray-800">
+                知识卡片生成器
+            </h1>
+            <p class="text-lg text-gray-600 mt-2 font-sans-sc">
+                用图片说话，让文字更有力量
+            </p>
+        </header>
+
+        <main
+            class="container mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-start"
+        >
+            <section class="bg-white p-8 rounded-lg shadow-md">
+                <form id="card-form">
+                    <div class="mb-6">
+                        <label
+                            for="title"
+                            class="block text-sm font-medium text-gray-700 mb-1"
+                            >标题</label
+                        >
+                        <input
+                            type="text"
+                            id="title"
+                            name="title"
+                            placeholder="输入主标题"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out"
+                        />
+                    </div>
+
+                    <div class="mb-6">
+                        <label
+                            for="body"
+                            class="block text-sm font-medium text-gray-700 mb-1"
+                            >正文内容</label
+                        >
+                        <textarea
+                            id="body"
+                            name="body"
+                            rows="6"
+                            placeholder="输入卡片的主要内容..."
+                            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out resize-y"
+                        ></textarea>
+                    </div>
+
+                    <div class="mb-6">
+                        <label
+                            for="notes-input"
+                            class="block text-sm font-medium text-gray-700 mb-1"
+                            >手记</label
+                        >
+                        <textarea
+                            id="notes-input"
+                            class="w-full p-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
+                            rows="2"
+                            maxlength="150"
+                            placeholder="输入手记（最多150字）"
+                        ></textarea>
+                        <div class="text-right text-sm text-gray-500">
+                            <span id="notes-char-count">0</span>/150
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <label
+                            for="qr-code"
+                            class="block text-sm font-medium text-gray-700 mb-1"
+                            >二维码图片</label
+                        >
+                        <div class="mt-1">
+                            <div class="qr-upload-container">
+                                <label
+                                    class="cursor-pointer bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                >
+                                    <i class="fas fa-upload mr-2"></i> 选择文件
+                                    <input
+                                        id="qr-code"
+                                        name="qr-code"
+                                        type="file"
+                                        class="sr-only"
+                                        accept="image/*"
+                                    />
+                                </label>
+                                <span
+                                    id="qr-filename"
+                                    class="ml-3 text-sm text-gray-500"
+                                    >未选择文件</span
+                                >
+                                <span
+                                    class="delete-btn"
+                                    id="delete-qr-btn"
+                                    title="删除二维码"
+                                    ><i class="fas fa-times"></i
+                                ></span>
+                            </div>
+                            <img
+                                id="qr-preview-thumb"
+                                src="#"
+                                alt="QR Code Preview"
+                                class="mt-2 h-16 w-16 object-contain hidden"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="mb-8">
+                        <label
+                            class="block text-sm font-medium text-gray-700 mb-2"
+                            >选择模板风格</label
+                        >
+                        <div
+                            class="grid grid-cols-2 sm:grid-cols-3 gap-3"
+                            id="style-selector"
+                        >
+                            <button
+                                type="button"
+                                data-style="minimalist"
+                                class="style-button text-xs sm:text-sm px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition duration-150 ease-in-out"
+                            >
+                                极简主义
+                            </button>
+                            <button
+                                type="button"
+                                data-style="bold-modern"
+                                class="style-button text-xs sm:text-sm px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition duration-150 ease-in-out"
+                            >
+                                大胆现代
+                            </button>
+                            <button
+                                type="button"
+                                data-style="elegant-vintage"
+                                class="style-button text-xs sm:text-sm px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition duration-150 ease-in-out"
+                            >
+                                优雅复古
+                            </button>
+                            <button
+                                type="button"
+                                data-style="scandinavian"
+                                class="style-button text-xs sm:text-sm px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition duration-150 ease-in-out"
+                            >
+                                斯堪的纳维亚
+                            </button>
+                            <button
+                                type="button"
+                                data-style="art-deco"
+                                class="style-button text-xs sm:text-sm px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition duration-150 ease-in-out"
+                            >
+                                艺术装饰
+                            </button>
+                            <button
+                                type="button"
+                                data-style="postmodern"
+                                class="style-button text-xs sm:text-sm px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition duration-150 ease-in-out"
+                            >
+                                后现代解构
+                            </button>
+                            <button
+                                type="button"
+                                data-style="neo-expressionism"
+                                class="style-button text-xs sm:text-sm px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition duration-150 ease-in-out"
+                            >
+                                新表现主义
+                            </button>
+                            <button
+                                type="button"
+                                data-style="extreme-minimalism"
+                                class="style-button text-xs sm:text-sm px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition duration-150 ease-in-out"
+                            >
+                                极端极简
+                            </button>
+                            <button
+                                type="button"
+                                data-style="hypersensory-minimalism"
+                                class="style-button text-xs sm:text-sm px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition duration-150 ease-in-out"
+                            >
+                                超感官极简
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </section>
+
+            <section class="flex flex-col items-center">
+                <div id="preview-card-container" class="mb-6">
+                    <div
+                        id="preview-card"
+                        class="flex items-center justify-center text-gray-500"
+                    >
+                        请在左侧输入内容并选择风格
+                    </div>
+                </div>
+                <div class="flex space-x-4 button-container">
+                    <button
+                        id="download-button"
+                        class="bg-green-600 text-white py-2 px-5 rounded-md font-medium hover:bg-green-700 transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled
+                    >
+                        <i class="fas fa-download mr-2"></i> 下载图片
+                        <div class="loader" id="download-loader"></div>
+                    </button>
+                    <button
+                        id="copy-button"
+                        class="bg-purple-600 text-white py-2 px-5 rounded-md font-medium hover:bg-purple-700 transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled
+                    >
+                        <i class="fas fa-copy mr-2"></i> 复制图片
+                        <div class="loader" id="copy-loader"></div>
+                    </button>
+                </div>
+                <p id="copy-status" class="text-sm text-green-600 mt-2 h-4"></p>
+            </section>
+        </main>
+
+        <footer class="text-center mt-12 pt-8 border-t border-gray-300">
+            <p class="text-sm text-gray-500 mb-4">
+                本网页是学习AI编程过程中的试验性工具，方便快速生成知识卡片
+            </p>
+            <div class="flex justify-center">
+                <img
+                    src="https://raw.githubusercontent.com/holyshell/AppsForMac/refs/heads/main/media/myid.jpg"
+                    alt="Developer QR Code"
+                    class="w-24 h-24 border border-gray-300 p-1"
+                />
+            </div>
+            <p class="text-xs text-gray-400 mt-2">使用问题请扫描二维码联系我</p>
+        </footer>
+
+        <script>
+            const form = document.getElementById("card-form");
+            const titleInput = document.getElementById("title");
+            const bodyInput = document.getElementById("body");
+            const notesInput = document.getElementById("notes-input");
+            const qrCodeInput = document.getElementById("qr-code");
+            const qrFilenameSpan = document.getElementById("qr-filename");
+            const qrPreviewThumb = document.getElementById("qr-preview-thumb");
+            const deleteQrBtn = document.getElementById("delete-qr-btn");
+            const styleSelector = document.getElementById("style-selector");
+            const generateButton = document.getElementById("generate-button");
+            const previewCardContainer = document.getElementById(
+                "preview-card-container",
+            );
+            const previewCard = document.getElementById("preview-card");
+            const downloadButton = document.getElementById("download-button");
+            const copyButton = document.getElementById("copy-button");
+            const downloadLoader = document.getElementById("download-loader");
+            const copyLoader = document.getElementById("copy-loader");
+            const copyStatus = document.getElementById("copy-status");
+            const currentYearSpan = document.getElementById("current-year");
+
+            let currentStyle = "minimalist"; // Default style
+            let qrCodeDataURL = null;
+            let cardGenerated = false; // Flag to enable buttons
+
+            // --- Utility Functions ---
+            function getCurrentDateFormatted() {
+                const date = new Date();
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, "0");
+                const day = String(date.getDate()).padStart(2, "0");
+                return `${year}-${month}-${day}`;
+            }
+
+            function escapeHtml(unsafe) {
+                if (!unsafe) return "";
+                return unsafe
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
+            // --- Event Listeners ---
+
+            // Update preview on input change
+            titleInput.addEventListener("input", updatePreview);
+            bodyInput.addEventListener("input", updatePreview);
+            notesInput.addEventListener("input", updatePreview);
+
+            // Character counter for notes
+            notesInput.addEventListener("input", function () {
+                document.getElementById("notes-char-count").textContent =
+                    this.value.length;
+            });
+
+            // Handle Style Selection
+            styleSelector.addEventListener("click", (event) => {
+                if (event.target.tagName === "BUTTON") {
+                    const selectedStyle =
+                        event.target.getAttribute("data-style");
+                    if (selectedStyle) {
+                        currentStyle = selectedStyle;
+                        // Update active button visual state
+                        document
+                            .querySelectorAll(".style-button")
+                            .forEach((btn) => {
+                                btn.classList.remove("active");
+                            });
+                        event.target.classList.add("active");
+                        // Force immediate preview update
+                        setTimeout(updatePreview, 0);
+                    }
+                }
+            });
+
+            // Handle QR Code Upload
+            qrCodeInput.addEventListener("change", (event) => {
+                const file = event.target.files[0];
+                if (file && file.type.startsWith("image/")) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        qrCodeDataURL = e.target.result;
+                        qrFilenameSpan.textContent = file.name;
+                        qrPreviewThumb.src = qrCodeDataURL;
+                        qrPreviewThumb.classList.remove("hidden");
+                        deleteQrBtn.style.display = "inline-block";
+                        updatePreview(); // Update preview with new QR code
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    resetQRCode();
+                    if (file) {
+                        // If a file was selected but invalid
+                        alert("请选择有效的图片文件 (e.g., PNG, JPG, GIF)");
+                        qrCodeInput.value = ""; // Clear the invalid file selection
+                    }
+                }
+            });
+
+            // Handle QR Code Deletion
+            deleteQrBtn.addEventListener("click", () => {
+                resetQRCode();
+            });
+
+            function resetQRCode() {
+                qrCodeDataURL = null;
+                qrFilenameSpan.textContent = "未选择文件";
+                qrPreviewThumb.classList.add("hidden");
+                qrPreviewThumb.src = "#";
+                qrCodeInput.value = "";
+                deleteQrBtn.style.display = "none";
+                updatePreview(); // Update preview without QR code
+            }
+
+            // --- Core Preview Update Function ---
+            function updatePreview() {
+                const title = escapeHtml(titleInput.value) || "请输入标题";
+                const body =
+                    escapeHtml(bodyInput.value).replace(/\n/g, "<br>") ||
+                    "这里是正文内容...";
+                const notes = escapeHtml(notesInput.value.trim()).replace(
+                    /\n/g,
+                    "<br>",
+                );
+                const date = new Date();
+                const formattedDateZh = date.toLocaleDateString("zh-CN", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                });
+                const formattedDateEn = date.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                });
+
+                // 处理二维码 - 如果没有上传则不显示
+                const qrCodeHtml = qrCodeDataURL
+                    ? `<img src="${qrCodeDataURL}" alt="QR Code" class="w-full h-full object-contain">`
+                    : "";
+
+                // 根据不同风格生成不同的手记样式HTML
+                let notesHtml = "";
+                if (notes) {
+                    switch (currentStyle) {
+                        case "minimalist":
+                            notesHtml = `
+                            <div class="notes-minimalist">
+                                <p class="text-sm text-gray-600 italic">手记：${notes}</p>
+                            </div>`;
+                            break;
+                        case "bold-modern":
+                            notesHtml = `
+                            <div class="notes-bold-modern">
+                                <p class="text-sm text-gray-400">手记：${notes}</p>
+                            </div>`;
+                            break;
+                        case "art-deco":
+                            notesHtml = `
+                            <div class="notes-art-deco">
+                                <p class="text-sm text-gray-300 italic">手记：${notes}</p>
+                            </div>`;
+                            break;
+                        case "neo-expressionism":
+                            notesHtml = `
+                            <div class="notes-neo-expressionism">
+                                <p class="text-sm text-black">手记：${notes}</p>
+                            </div>`;
+                            break;
+                        case "extreme-minimalism":
+                            notesHtml = `
+                            <p class="notes-extreme-minimalism">手记：${notes}</p>`;
+                            break;
+                        case "hypersensory-minimalism":
+                            notesHtml = `
+                            <div class="notes-hypersensory-minimalism">
+                                <p class="text-sm text-gray-500">手记：${notes}</p>
+                            </div>`;
+                            break;
+                        default:
+                            notesHtml = `
+                            <div class="notes-default">
+                                <p class="text-sm">手记：${notes}</p>
+                            </div>`;
+                    }
+                }
+
+                // 根据不同风格生成完整的预览HTML
+                let previewHtml = "";
+                switch (currentStyle) {
+                    case "minimalist":
+                        previewHtml = `
+                        <div class="p-8 bg-white">
+                            <div class="text-sm text-gray-500 mb-2">${getCurrentDateFormatted()}</div>
+                            <h1 class="text-2xl font-serif-sc mb-6">${title}</h1>
+                            <div class="card-content text-gray-800 leading-relaxed mb-6">${body}</div>
+                            ${notesHtml}
+                            <div class="qr-code-container">
+                                <div class="qr-code">${qrCodeHtml}</div>
+                            </div>
+                        </div>`;
+                        break;
+                    case "bold-modern":
+                        previewHtml = `
+                        <div class="p-8 bg-gray-900 text-white">
+                            <div class="text-sm text-gray-400 mb-2">${getCurrentDateFormatted()}</div>
+                            <h1 class="text-3xl font-bold mb-6">${title}</h1>
+                            <div class="card-content text-gray-300 leading-relaxed mb-6">${body}</div>
+                            ${notesHtml}
+                            <div class="qr-code-container">
+                                <div class="qr-code bg-white p-2">${qrCodeHtml}</div>
+                            </div>
+                        </div>`;
+                        break;
+                    case "elegant-vintage":
+                        previewHtml = `
+                        <div class="p-8 bg-amber-50 text-gray-800">
+                            <div class="text-sm text-gray-500 mb-2">${getCurrentDateFormatted()}</div>
+                            <h1 class="text-3xl font-serif-sc mb-6">${title}</h1>
+                            <div class="card-content text-gray-700 leading-relaxed mb-6">${body}</div>
+                            ${notesHtml}
+                            <div class="qr-code-container">
+                                <div class="qr-code bg-white p-1 border border-gray-300">${qrCodeHtml}</div>
+                            </div>
+                        </div>`;
+                        break;
+                    case "scandinavian":
+                        previewHtml = `
+                        <div class="p-8 bg-white">
+                            <div class="text-sm text-gray-400 mb-2">${getCurrentDateFormatted()}</div>
+                            <h1 class="text-2xl font-sans-sc font-light mb-6">${title}</h1>
+                            <div class="card-content text-gray-600 leading-relaxed mb-6">${body}</div>
+                            ${notesHtml}
+                            <div class="qr-code-container">
+                                <div class="qr-code bg-gray-100 p-1">${qrCodeHtml}</div>
+                            </div>
+                        </div>`;
+                        break;
+                    case "art-deco":
+                        previewHtml = `
+                        <div class="p-8 style-art-deco">
+                            <div class="text-sm text-gray-300 mb-2">${getCurrentDateFormatted()}</div>
+                            <h1 class="text-3xl font-serif-sc mb-6 text-[#D4AF37]">${title}</h1>
+                            <div class="card-content text-gray-200 leading-relaxed mb-6">${body}</div>
+                            ${notesHtml}
+                            <div class="qr-code-container">
+                                <div class="qr-code bg-black p-1 border border-[#D4AF37]">${qrCodeHtml}</div>
+                            </div>
+                        </div>`;
+                        break;
+                    case "postmodern":
+                        previewHtml = `
+                        <div class="p-8 style-postmodern bg-white">
+                            <div class="text-sm text-gray-500 mb-2">${getCurrentDateFormatted()}</div>
+                            <h1 class="text-3xl font-bold mb-6 text-pink-600">${title}</h1>
+                            <div class="card-content text-gray-800 leading-relaxed mb-6">${body}</div>
+                            ${notesHtml}
+                            <div class="qr-code-container">
+                                <div class="qr-code bg-yellow-200 p-1 border-2 border-green-500">${qrCodeHtml}</div>
+                            </div>
+                        </div>`;
+                        break;
+                    case "neo-expressionism":
+                        previewHtml = `
+                        <div class="p-8 style-neo-expressionism">
+                            <div class="text-sm text-black mb-2">${getCurrentDateFormatted()}</div>
+                            <h1 class="text-3xl font-bold mb-6 text-red-600">${title}</h1>
+                            <div class="card-content text-black leading-relaxed mb-6">${body}</div>
+                            ${notesHtml}
+                            <div class="qr-code-container">
+                                <div class="qr-code bg-white p-1 border-2 border-black">${qrCodeHtml}</div>
+                            </div>
+                        </div>`;
+                        break;
+                    case "extreme-minimalism":
+                        previewHtml = `
+                        <div class="p-8 style-hypersensory-minimalism">
+                            <div class="text-xs text-gray-400 mb-2">${getCurrentDateFormatted()}</div>
+                            <h1 class="text-xl font-light mb-6 text-gray-700">${title}</h1>
+                            <div class="card-content text-gray-600 leading-relaxed mb-6 text-sm">${body}</div>
+                            ${notesHtml}
+                            <div class="qr-code-container">
+                                <div class="qr-code bg-white p-0.5 border border-gray-200" style="width: 80px; height: 80px;">${qrCodeHtml}</div>
+                            </div>
+                        </div>`;
+                        break;
+                    case "hypersensory-minimalism":
+                        previewHtml = `
+                        <div class="p-8 style-hypersensory-minimalism">
+                            <div class="text-sm text-gray-400 mb-2">${getCurrentDateFormatted()}</div>
+                            <h1 class="text-2xl font-light mb-6 text-gray-700">${title}</h1>
+                            <div class="text-gray-600 leading-relaxed mb-6">${body}</div>
+                            ${notesHtml}
+                            <div class="qr-code-container">
+                                <div class="qr-code bg-white p-1 border border-gray-200">${qrCodeHtml}</div>
+                            </div>
+                        </div>`;
+                        break;
+                }
+
+                // 更新预览区域
+                const previewCard = document.getElementById("preview-card");
+                previewCard.innerHTML = previewHtml;
+
+                // 启用下载和复制按钮
+                downloadButton.disabled = false;
+                copyButton.disabled = false;
+                cardGenerated = true;
+            }
+
+            // --- Image Generation & Handling ---
+
+            function showLoader(loaderElement) {
+                loaderElement.style.display = "inline-block";
+            }
+            function hideLoader(loaderElement) {
+                loaderElement.style.display = "none";
+            }
+            function showStatus(message, isError = false) {
+                copyStatus.textContent = message;
+                copyStatus.style.color = isError ? "#dc2626" : "#16a34a"; // Red-600 or Green-600
+                setTimeout(() => {
+                    copyStatus.textContent = "";
+                }, 3000); // Clear after 3 seconds
+            }
+
+            // Download Image
+            downloadButton.addEventListener("click", () => {
+                if (!cardGenerated || !html2canvas) return;
+
+                showLoader(downloadLoader);
+                downloadButton.disabled = true;
+
+                // Temporarily remove dashed border for capture
+                const originalBorder = previewCardContainer.style.border;
+                previewCardContainer.style.border = "none";
+
+                // Special handling for elegant-vintage style to ensure background is visible
+                const backgroundColor =
+                    currentStyle === "elegant-vintage" ? "#fef3c7" : null;
+
+                html2canvas(previewCard, {
+                    scale: 2, // Increase resolution
+                    useCORS: true, // Important if QR code is external
+                    backgroundColor: backgroundColor, // Set background color for elegant-vintage
+                })
+                    .then((canvas) => {
+                        const link = document.createElement("a");
+                        link.download = `knowledge-card-${currentStyle}-${Date.now()}.png`;
+                        link.href = canvas.toDataURL("image/png");
+                        link.click();
+                        hideLoader(downloadLoader);
+                        downloadButton.disabled = false;
+                        previewCardContainer.style.border = originalBorder; // Restore border
+                    })
+                    .catch((err) => {
+                        console.error("Oops, something went wrong!", err);
+                        showStatus("下载失败，请检查控制台。", true);
+                        hideLoader(downloadLoader);
+                        downloadButton.disabled = false;
+                        previewCardContainer.style.border = originalBorder; // Restore border
+                    });
+            });
+
+            // Copy Image to Clipboard
+            copyButton.addEventListener("click", async () => {
+                if (
+                    !cardGenerated ||
+                    !html2canvas ||
+                    !navigator.clipboard ||
+                    !navigator.clipboard.write
+                ) {
+                    if (!navigator.clipboard || !navigator.clipboard.write) {
+                        showStatus(
+                            "复制功能需要安全上下文 (HTTPS) 且浏览器支持。",
+                            true,
+                        );
+                    }
+                    return;
+                }
+
+                showLoader(copyLoader);
+                copyButton.disabled = true;
+                copyStatus.textContent = ""; // Clear previous status
+
+                // Temporarily remove dashed border for capture
+                const originalBorder = previewCardContainer.style.border;
+                previewCardContainer.style.border = "none";
+
+                // Special handling for elegant-vintage style to ensure background is visible
+                const backgroundColor =
+                    currentStyle === "elegant-vintage" ? "#fef3c7" : null;
+
+                try {
+                    const canvas = await html2canvas(previewCard, {
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: backgroundColor,
+                    });
+                    canvas.toBlob(async (blob) => {
+                        if (!blob) {
+                            throw new Error("Canvas to Blob conversion failed");
+                        }
+                        try {
+                            await navigator.clipboard.write([
+                                new ClipboardItem({ "image/png": blob }),
+                            ]);
+                            showStatus("图片已复制到剪贴板！");
+                        } catch (err) {
+                            console.error("Clipboard API error:", err);
+                            showStatus(`复制失败: ${err.message}`, true);
+                        } finally {
+                            hideLoader(copyLoader);
+                            copyButton.disabled = false;
+                            previewCardContainer.style.border = originalBorder; // Restore border
+                        }
+                    }, "image/png");
+                } catch (err) {
+                    console.error("html2canvas or Blob error:", err);
+                    showStatus(`生成图片时出错: ${err.message}`, true);
+                    hideLoader(copyLoader);
+                    copyButton.disabled = false;
+                    previewCardContainer.style.border = originalBorder; // Restore border
+                }
+            });
+
+            // --- Initial Setup ---
+            currentYearSpan.textContent = new Date().getFullYear();
+            // Set default active button
+            document
+                .querySelector(`.style-button[data-style='${currentStyle}']`)
+                .classList.add("active");
+            // Initial render with placeholder
+            setTimeout(updatePreview, 0);
+            // Disable buttons initially until first render triggered by input/selection
+            downloadButton.disabled = true;
+            copyButton.disabled = true;
+            cardGenerated = false; // Reset flag
+        </script>
+    </body>
+</html>
